@@ -8,14 +8,16 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TestMethod } from 'src/common/enums/TestingMethod.enum';
 import { GoogleService } from 'src/google/google.service';
-import { CreatePatientDto } from './dto/createPatient.dto';
-import { UpdatePatientDto } from './dto/UpdatePatient.dto';
+import { CreatePatientDto } from './dto/create-patient.dto';
+import { PatientFilterDto } from './dto/patient-filter.dto';
+import { UpdatePatientDto } from './dto/update-patient.dto';
 import { PatientsService } from './patients.service';
 
 @Controller('patients')
@@ -25,9 +27,19 @@ export class PatientsController {
     private readonly googleService: GoogleService,
   ) {}
 
+  @Get()
+  getAll(@Query() filterDto: PatientFilterDto) {
+    return this.patientService.getAll(filterDto);
+  }
+
   @Get('/:id')
   getById(id: string) {
     return this.patientService.getById(id);
+  }
+
+  @Get('/:id/file-result')
+  getFileResult(@Param('id') id: string) {
+    return this.patientService.getFileResult(id);
   }
 
   @Post()
@@ -52,14 +64,14 @@ export class PatientsController {
   }
 
   @Post('/:id/upload-result')
-  @UseInterceptors(FileInterceptor('result'))
+  @UseInterceptors(FileInterceptor('fileResult'))
   @HttpCode(200)
-  updateResultReport(
+  async updateResultReport(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    file.filename = id;
-    console.log(file);
-    return this.googleService.uploadFile(file);
+    const sharedFileDto = await this.googleService.uploadFile(file);
+    console.log(sharedFileDto);
+    await this.patientService.updateFileResult(id, sharedFileDto);
   }
 }

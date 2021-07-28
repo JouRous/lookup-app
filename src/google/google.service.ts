@@ -1,28 +1,25 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { plainToClass } from 'class-transformer';
 import { google } from 'googleapis';
 import * as stream from 'stream';
+import { SharedFileDto } from './dto/share-file.dto';
 
 @Injectable()
 export class GoogleService {
   oAuth2Client = new google.auth.OAuth2();
   drive = google.drive({ version: 'v3' });
 
-  constructor() {
-    const clientId =
-      '797025285452-cfa9tcf8erdfql3jtilv30tepclnnn03.apps.googleusercontent.com';
-    const clientSecret = 'xfBHYq-whMhnBN3jknv_763y';
-
-    const redirectUri = 'https://developers.google.com/oauthplayground';
-    const refreshToken =
-      '1//04LJkOOh1bT35CgYIARAAGAQSNwF-L9Irag1n54HKJxkzqcbFol9tQ_oKlv7B_S2CVmr49c4LW0fT07xVbZBRkK6xX1vjtJV0zBQ';
-
+  constructor(private readonly configService: ConfigService) {
     this.oAuth2Client = new google.auth.OAuth2({
-      clientId,
-      clientSecret,
-      redirectUri,
+      clientId: configService.get('CLIENT_ID'),
+      clientSecret: configService.get('CLIENT_SECRET'),
+      redirectUri: configService.get('REDIRECT_URI'),
     });
 
-    this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
+    this.oAuth2Client.setCredentials({
+      refresh_token: configService.get('REFRESH_TOKEN'),
+    });
 
     this.drive = google.drive({
       version: 'v3',
@@ -46,7 +43,20 @@ export class GoogleService {
         },
       });
 
-      console.log(response.data);
+      await this.drive.permissions.create({
+        fileId: response.data.id,
+        requestBody: {
+          type: 'anyone',
+          role: 'reader',
+        },
+      });
+
+      const sharedFile = await this.drive.files.get({
+        fileId: response.data.id,
+        fields: 'id, webViewLink',
+      });
+
+      return plainToClass(SharedFileDto, sharedFile.data);
     } catch (error) {
       console.log(error.message);
     }

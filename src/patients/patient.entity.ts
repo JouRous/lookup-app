@@ -59,7 +59,10 @@ export class Patient {
 
   @Column({ default: null })
   @Exclude({ toPlainOnly: true })
-  testResultReport: string;
+  resultFileId: string;
+
+  @Column({ default: null })
+  resultFileUrl: string;
 
   @BeforeInsert()
   parseDateInsert() {
