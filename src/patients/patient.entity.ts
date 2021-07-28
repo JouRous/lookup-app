@@ -11,7 +11,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import * as dayjs from 'dayjs';
-import { Transform } from 'class-transformer';
+import { Exclude, Transform } from 'class-transformer';
 
 @Entity()
 export class Patient {
@@ -56,6 +56,10 @@ export class Patient {
 
   @Column()
   PCRValue: string;
+
+  @Column({ default: null })
+  @Exclude({ toPlainOnly: true })
+  testResultReport: string;
 
   @BeforeInsert()
   parseDateInsert() {
